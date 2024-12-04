@@ -1,9 +1,8 @@
 {
-
-  "name": "Prezzi PUN del mese",
+  "name": "Prezzi PUN e zonali del mese",
   "homeassistant": "2022.8",
   "hide_default_branch": true,
   "zip_release": true,
-  "filename": "pun_sensor.zip",
+  "filename": "gme_sensor.zip",
   "render_readme": true
 }
