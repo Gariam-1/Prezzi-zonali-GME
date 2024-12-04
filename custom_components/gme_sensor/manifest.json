@@ -1,0 +1,16 @@
+{
+  "domain": "gme_sensor",
+  "name": "Prezzi PUN e zonali del mese",
+  "codeowners": ["@Gariam-1"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Gariam-1/GME-energy-prices.git",
+  "import_executor": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Gariam-1/GME-energy-prices/issues",
+  "loggers": ["gme_sensor"],
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.0.0"
+}
