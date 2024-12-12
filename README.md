@@ -1,13 +1,9 @@
-# Prezzi PUN e zonali del mese
+# Prezzi zonali GME
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
 [![Validate](https://github.com/Gariam-1/Prezzi-zonali-GME/actions/workflows/validate.yaml/badge.svg?branch=master)](https://github.com/Gariam-1/Prezzi-zonali-GME/actions/workflows/validate.yaml)
 [![release](https://img.shields.io/github/v/release/Gariam-1/Prezzi-zonali-GME?style=flat-square)](https://github.com/Gariam-1/Prezzi-zonali-GME/releases)
-
-La mia versione dell'integrazione di [virtualdj](https://github.com/virtualdj). Ho aggiunto il prezzi zonali e i prezzi orari.
-
-Descrizione originale:
 
 Integrazione per **Home Assistant** (derivata dall'integrazione [pun_sensor](https://github.com/virtualdj/pun_sensor) di virtualdj) che mostra i prezzi stimati del mese corrente per fasce orarie (F1, F2, F3, F23 e mono-orario) nonché la fascia oraria attuale e il prezzo dell'ora corrente.
 
