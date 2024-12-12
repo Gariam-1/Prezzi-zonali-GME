@@ -7,7 +7,7 @@
 
 Integrazione per **Home Assistant** (derivata dall'integrazione [pun_sensor](https://github.com/virtualdj/pun_sensor) di virtualdj) che mostra i prezzi stimati del mese corrente per fasce orarie (F1, F2, F3, F23 e mono-orario) nonché la fascia oraria attuale e il prezzo dell'ora corrente.
 
-I valori vengono scaricati dal sito [MercatoElettrico.org](https://gme.mercatoelettrico.org/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN), i prezzi delle fasce vengono calcolati dai prezzi orari con una media ponderata sul fabbisogno stimato nella zona selezionata, come segue: somma_ore(prezzi * fabbisogno) / somma_ore(fabbisogno).
+I valori vengono scaricati dal sito [MercatoElettrico.org](https://gme.mercatoelettrico.org/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN), i prezzi delle fasce vengono calcolati dai prezzi orari con una media ponderata sul fabbisogno stimato nella zona selezionata, come segue: somma_ore(prezzi * fabbisogno) / somma_ore(fabbisogno)
 
 ## Installazione in Home Assistant
 
