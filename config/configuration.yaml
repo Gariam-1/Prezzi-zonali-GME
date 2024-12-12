@@ -6,7 +6,7 @@ logger:
   logs:
     homeassistant.setup: warning
     homeassistant.components.go2rtc: fatal
-    custom_components.gme_sensor: debug
+    custom_components.pzo_sensor: debug
 
 # Disable ffmpeg
 ffmpeg:
