@@ -23,14 +23,14 @@ jobs:
 
       - name: Create zip
         run: |
-          cd custom_components/pun_sensor
-          zip pun_sensor.zip -r ./
+          cd custom_components/pzo_sensor
+          zip pzo_sensor.zip -r ./
 
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@2.9.0
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./custom_components/pun_sensor/pun_sensor.zip
-          asset_name: pun_sensor.zip
+          file: ./custom_components/pzo_sensor/pzo_sensor.zip
+          asset_name: pzo_sensor.zip
           tag: ${{ github.ref }}
           overwrite: true

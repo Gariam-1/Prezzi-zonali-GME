@@ -14,7 +14,7 @@ def update_manifest():
 
     # read manifest
     with open(
-        f"{os.getcwd()}/custom_components/pun_sensor/manifest.json"
+        f"{os.getcwd()}/custom_components/pzo_sensor/manifest.json"
     ) as manifestfile:
         manifest = json.load(manifestfile)
 
@@ -30,7 +30,7 @@ def update_manifest():
 
     # save manifest
     with open(
-        f"{os.getcwd()}/custom_components/pun_sensor/manifest.json", "w"
+        f"{os.getcwd()}/custom_components/pzo_sensor/manifest.json", "w"
     ) as manifestfile:
         manifestfile.write(json.dumps(manifest, indent=4, sort_keys=False))
 
