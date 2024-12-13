@@ -66,7 +66,3 @@ Il tasto verrà modificato come nell'immagine qui sotto:
 ![Estrazione log di debug](screenshot_debug_2.png "Estrazione log di debug")
 
 Dopo che si verifica il problema, premerlo nuovamente: in questo modo verrà scaricato un file di log con le informazioni da allegare alle [Issue](https://github.com/Gariam-1/Prezzi-zonali-GME/issues).
-
-### Note di sviluppo
-
-Potete trovare un diario dell'esperienza di programmazione dell'[itegrazione originale](https://github.com/virtualdj/pun_sensor) da virtualdj in [questa pagina](DEVELOPMENT.md). Troverete i link alle pagine dei progetti che lo hanno aiutato a svilupparla così com'è ora.
