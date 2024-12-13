@@ -1,7 +1,7 @@
 {
   "domain": "pzo_sensor",
   "name": "Prezzi zonali GME",
-  "codeowners": ["@Gariam-1"],
+  "codeowners": ["@Gariam-1", "@virtualdj"],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Gariam-1/Prezzi-zonali-GME.git",

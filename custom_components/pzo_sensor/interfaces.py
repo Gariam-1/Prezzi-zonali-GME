@@ -18,11 +18,10 @@ class PricesData:
 
     def __init__(self):
         self.data: dict[Fascia, list[float]] = {
-            Fascia.ORARIA: [0] * 24,
-            Fascia.F1: [0] * 24,
-            Fascia.F2: [0] * 24,
-            Fascia.F3: [0] * 24,
-            Fascia.F23: [0] * 24,
+            Fascia.ORARIA: [],
+            Fascia.F1: [],
+            Fascia.F2: [],
+            Fascia.F3: [],
         }
 
 

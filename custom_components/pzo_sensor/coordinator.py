@@ -145,15 +145,10 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
         end_date_param = date_end.strftime("%Y%m%d")
 
         # URL del sito Mercato elettrico
-        download_url = {
-            "prezzi": f"https://gme.mercatoelettrico.org/DesktopModules/GmeDownload/API/ExcelDownload/downloadzipfile?DataInizio={start_date_param}&DataFine={end_date_param}&Date={end_date_param}&Mercato=MGP&Settore=Prezzi&FiltroDate=InizioFine",
-            "consumi": f"https://gme.mercatoelettrico.org/DesktopModules/GmeDownload/API/ExcelDownload/downloadzipfile?DataInizio={start_date_param}&DataFine={end_date_param}&Date={end_date_param}&Mercato=MGP&Settore=StimeFabbisogno&FiltroDate=InizioFine"
-        }
+        download_url = f"https://gme.mercatoelettrico.org/DesktopModules/GmeDownload/API/ExcelDownload/downloadzipfile?DataInizio={start_date_param}&DataFine={end_date_param}&Date={end_date_param}&Mercato=MGP&Settore=Prezzi&FiltroDate=InizioFine"
 
         # Imposta gli header della richiesta per i prezzi
-        heads = {"prezzi": {}, "consumi": {}}
-        archive = {"prezzi": 0, "consumi": 0}
-        heads["prezzi"] = {
+        heads = {
             "moduleid": "12103",
             "referer": "https://gme.mercatoelettrico.org/en-us/Home/Results/Electricity/MGP/Download?valore=Prezzi",
             "sec-ch-ua-mobile": "?0",
@@ -166,62 +161,58 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
             "userid": "-1",
         }
 
-        # Imposta gli header della richiesta per il fabbisogno energetico
-        heads["consumi"] = heads["prezzi"].copy()
-        heads["consumi"]["referer"] = "https://gme.mercatoelettrico.org/en-us/Home/Results/Electricity/MGP/Download/Download?valore=StimeFabbisogno"
-
         # Effettua il download dello ZIP con i file XML
-        for tipo in heads.keys():
-            _LOGGER.debug(f"Inizio download file ZIP con XML {tipo}.")
-            async with self.session.get(download_url[tipo], headers=heads[tipo]) as response:
-                # Aspetta la request
-                bytes_response = await response.read()
+        _LOGGER.debug(f"Inizio download file ZIP con XML.")
+        async with self.session.get(download_url, headers=heads) as response:
+            # Aspetta la request
+            bytes_response = await response.read()
 
-                # Se la richiesta NON e' andata a buon fine ritorna l'errore subito
-                if response.status != 200:
-                    _LOGGER.error("Richiesta fallita con errore %s", response.status)
-                    raise ServerConnectionError(
-                        f"Richiesta fallita con errore {response.status}"
-                    )
-
-                # La richiesta e' andata a buon fine, tenta l'estrazione
-                try:
-                    archive[tipo] = zipfile.ZipFile(io.BytesIO(bytes_response), "r")
-
-                # Ritorna error se l'output non è uno ZIP, o ha un errore IO
-                except (zipfile.BadZipfile, OSError) as e:  # not a zip:
-                    _LOGGER.error(
-                        "Download fallito con URL: %s, lunghezza %s, risposta %s",
-                        download_url,
-                        response.content_length,
-                        response.status,
-                    )
-                    raise UpdateFailed("Archivio ZIP scaricato dal sito non valido.") from e
-
-                # Mostra i file nell'archivio
-                nFile = archive[tipo].namelist()
-                _LOGGER.debug(
-                    "%s file trovati nell'archivio (%s)",
-                    len(nFile),
-                    ", ".join(str(fn) for fn in nFile),
+            # Se la richiesta NON e' andata a buon fine ritorna l'errore subito
+            if response.status != 200:
+                _LOGGER.error("Richiesta fallita con errore %s", response.status)
+                raise ServerConnectionError(
+                    f"Richiesta fallita con errore {response.status}"
                 )
 
+            # La richiesta e' andata a buon fine, tenta l'estrazione
+            try:
+                archive = zipfile.ZipFile(io.BytesIO(bytes_response), "r")
+
+            # Ritorna error se l'output non è uno ZIP, o ha un errore IO
+            except (zipfile.BadZipfile, OSError) as e:  # not a zip:
+                _LOGGER.error(
+                    "Download fallito con URL: %s, lunghezza %s, risposta %s",
+                    download_url,
+                    response.content_length,
+                    response.status,
+                )
+                raise UpdateFailed("Archivio ZIP scaricato dal sito non valido.") from e
+
+            # Mostra i file nell'archivio
+            nFile = archive.namelist()
+            _LOGGER.debug(
+                "%s file trovati nell'archivio (%s)",
+                len(nFile),
+                ", ".join(str(fn) for fn in nFile),
+            )
+
         # Estrae i dati dall'archivio
-        self.pz_data.data, zone_usage_data = extract_xml(archive["prezzi"], archive["consumi"], self.pz_data.data, self.zone)
-        archive["prezzi"].close()
-        archive["consumi"].close()
+        self.pz_data.data = extract_xml(archive, self.pz_data.data, self.zone)
+        archive.close()
         
         # Per ogni fascia, calcola il valore dei prezzi zonali
         for fascia, pz_list in self.pz_data.data.items():
-            # Calcola le fasce facendo la media pesata dei prezzi orari usando i consumi orari
-            # Usando la seguente formula per fascia: somma_ore(prezzi * consumi) / somma_ore(consumi)
+            # Calcola le fasce facendo la media dei prezzi orari che le compongono
             if fascia == Fascia.ORARIA:
-                self.pz_values.value[Fascia.MONO] = sum([value * zone_usage_data[fascia][index] for index, value in enumerate(pz_list)]) / sum(zone_usage_data[fascia])
                 self.pz_values.value[fascia] = pz_list[datetime.now().hour]
             else:
-                # I valori al di fuori della fascia corrente sono tutti 0
-                self.pz_values.value[fascia] = sum([value * zone_usage_data[fascia][index] for index, value in enumerate(pz_list) if value > 0]) / sum(zone_usage_data[fascia])
-        
+                self.pz_values.value[fascia] = mean(self.pz_data.data[fascia])
+
+        # Calcola la fascia F23 e il mono-fascia facendo la media delle fasce che le compongono ponderata sul numero di ore che coprono
+        ore_fasce = {Fascia.F1: len(self.pz_data.data[Fascia.F1]), Fascia.F2: len(self.pz_data.data[Fascia.F2]), Fascia.F3: len(self.pz_data.data[Fascia.F3])}
+        self.pz_values.value[Fascia.MONO] = (self.pz_values.value[Fascia.F1] * ore_fasce[Fascia.F1] + self.pz_values.value[Fascia.F2] * ore_fasce[Fascia.F2] + self.pz_values.value[Fascia.F3] * ore_fasce[Fascia.F3]) / 24
+        self.pz_values.value[Fascia.F23] = (self.pz_values.value[Fascia.F2] * ore_fasce[Fascia.F2] + self.pz_values.value[Fascia.F3] * ore_fasce[Fascia.F3]) / (ore_fasce[Fascia.F2] + ore_fasce[Fascia.F3])
+
         # Logga i dati
         _LOGGER.debug(
             f"Valori prezzi zonali ({self.zone}): " + "%s",

@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Impostazioni scraping dei prezzi zonali da GME",
+        "title": "Impostazioni scraping prezzi zonali GME",
         "data": {
           "zone": "Zona geografica",
           "scan_hour": "Ora inizio download dati (0-23)",
@@ -21,7 +21,7 @@
   "options": {
     "step": {
       "init": {
-        "title": "Modifica impostazioni scraping dei prezzi zonali da GME",
+        "title": "Modifica impostazioni scraping prezzi zonali GME",
         "data": {
           "zone": "Zona geografica",
           "scan_hour": "Ora inizio download dati (0-23)",
