@@ -14,12 +14,16 @@ EVENT_UPDATE_ORARIO = "event_update_orario"
 
 # Parametri configurabili da configuration.yaml
 CONF_ZONE = "zone"
+CONF_CONTRACT = "contract"
 CONF_SCAN_HOUR = "scan_hour"
 CONF_ACTUAL_DATA_ONLY = "actual_data_only"
 CONF_MONTH_AVG = "month_average"
 
 # Parametri interni
 CONF_SCAN_MINUTE = "scan_minute"
+
+CONTRACTS = {"Tri-orario": 3, "Bi-orario": 2, "Mono-orario": 1}
+DEFAULT_CONTRACT = "Tri-orario"
 
 # Traduce i nomi delle zone nei rispettivi codici presenti nell'xml
 ZONE_CODES = {
@@ -35,7 +39,7 @@ ZONE_CODES = {
     #"Grecia": "GREC",
     #"Malta": "MALT",
     #"Montenegro": "MONT",
-    "Italia (senza vincoli)": "NAT",
+    "Italia": "NAT",
     "Nord": "NORD",
     "Sardegna": "SARD",
     "Sicilia": "SICI",
@@ -47,6 +51,5 @@ ZONE_CODES = {
     #"Grecia Coupling": "XGRE",
 }
 
-DEFAULT_ZONE = "NAT"
-
+DEFAULT_ZONE = "Italia"
 PHYSICAL_ZONES = ["CALA", "CNOR", "CSUD", "NORD", "SARD", "SICI", "SUD"]

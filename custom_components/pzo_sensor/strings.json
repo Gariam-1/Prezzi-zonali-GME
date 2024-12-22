@@ -5,6 +5,7 @@
         "title": "Impostazioni scraping prezzi zonali GME",
         "data": {
           "zone": "Zona geografica",
+          "contract": "Tipo di contratto",
           "scan_hour": "Ora inizio download dati (0-23)",
           "month_average": "Calcola la media del mese corrente (altrimenti fornisce solo il dato odierno)",
           "actual_data_only": "Usa solo dati reali ad inizio mese"
@@ -24,6 +25,7 @@
         "title": "Modifica impostazioni scraping prezzi zonali GME",
         "data": {
           "zone": "Zona geografica",
+          "contract": "Tipo di contratto",
           "scan_hour": "Ora inizio download dati (0-23)",
           "month_average": "Calcola la media del mese corrente (altrimenti fornisce solo il dato odierno)",
           "actual_data_only": "Usa solo dati reali ad inizio mese"

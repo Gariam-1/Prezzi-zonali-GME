@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import async_call_later, async_track_point_in_time
 import homeassistant.util.dt as dt_util
 
-from .const import CONF_ACTUAL_DATA_ONLY, CONF_SCAN_HOUR, CONF_ZONE, CONF_MONTH_AVG, DOMAIN, WEB_RETRIES_MINUTES
+from .const import CONF_ACTUAL_DATA_ONLY, CONF_SCAN_HOUR, ZONE_CODES, CONF_ZONE, CONTRACTS, CONF_CONTRACT, CONF_MONTH_AVG, DOMAIN, WEB_RETRIES_MINUTES
 from .coordinator import PricesDataUpdateCoordinator
 
 if AwesomeVersion(HA_VERSION) >= AwesomeVersion("2024.5.0"):
@@ -79,7 +79,14 @@ async def update_listener(hass: HomeAssistant, config: ConfigEntry) -> None:
         config.options[CONF_ZONE] != coordinator.zone
     ):
         # Modificata la zona geografica nelle opzioni
-        coordinator.scan_hour = config.options[CONF_SCAN_HOUR]
+        coordinator.zone = ZONE_CODES[config.options[CONF_ZONE]]
+        reload = True
+
+    if (CONF_CONTRACT in config.options) and (
+        config.options[CONF_CONTRACT] != coordinator.contract
+    ):
+        # Modificata il tipo di contratto nelle opzioni
+        coordinator.contract = CONTRACTS[config.options[CONF_CONTRACT]]
         reload = True
 
     if (CONF_SCAN_HOUR in config.options) and (

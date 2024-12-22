@@ -7,7 +7,7 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 import homeassistant.helpers.config_validation as cv
 
-from .const import CONF_ACTUAL_DATA_ONLY, CONF_SCAN_HOUR, CONF_ZONE, CONF_MONTH_AVG, ZONE_CODES, DEFAULT_ZONE, DOMAIN
+from .const import CONF_ACTUAL_DATA_ONLY, CONF_SCAN_HOUR, CONF_ZONE, DEFAULT_ZONE, CONF_CONTRACT, DEFAULT_CONTRACT, CONF_MONTH_AVG, ZONE_CODES, CONTRACTS, DOMAIN
 
 
 class OptionsFlow(config_entries.OptionsFlow):
@@ -32,6 +32,12 @@ class OptionsFlow(config_entries.OptionsFlow):
                     CONF_ZONE, self.config_entry.data[CONF_ZONE]
                 )
             ): vol.In(ZONE_CODES.keys()),
+            vol.Required(
+                CONF_CONTRACT,
+                default=self.config_entry.options.get(
+                    CONF_CONTRACT, self.config_entry.data[CONF_CONTRACT]
+                )
+            ): vol.In(CONTRACTS.keys()),
             vol.Required(
                 CONF_SCAN_HOUR,
                 default=self.config_entry.options.get(
@@ -86,6 +92,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Schema dati di configurazione (con default fissi)
         data_schema = {
             vol.Required(CONF_ZONE, default=DEFAULT_ZONE): vol.In(ZONE_CODES.keys()),
+            vol.Required(CONF_CONTRACT, default=DEFAULT_CONTRACT): vol.In(CONTRACTS.keys()),
             vol.Required(CONF_SCAN_HOUR, default=1): vol.All(
                 cv.positive_int, vol.Range(min=0, max=23)
             ),

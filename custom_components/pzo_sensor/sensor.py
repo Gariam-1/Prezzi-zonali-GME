@@ -56,13 +56,23 @@ async def async_setup_entry(
 
     # Crea i sensori dei valori dei prezzi zonali (legati al coordinator)
     entities: list[SensorEntity] = []
-    entities.extend(
-        PriceSensorEntity(coordinator, fascia) for fascia in PricesValues().value
-    )
+    match coordinator.contract:
+        case 3:
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.F1))
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.F2))
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.F3))
+        case 2:
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.F1))
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.F23))
+        case 1:
+            entities.append(PrezzoSensorEntity(coordinator, Fascia.MONO))
 
     # Crea sensori aggiuntivi
-    entities.append(FasciaSensorEntity(coordinator))
-    entities.append(PrezzoFasciaSensorEntity(coordinator))
+    if coordinator.contract != 1:
+        entities.append(FasciaSensorEntity(coordinator))
+        entities.append(PrezzoFasciaSensorEntity(coordinator))
+
+    entities.append(PrezzoOrarioSensorEntity(coordinator))
 
     # Aggiunge i sensori ma non aggiorna automaticamente via web
     # per lasciare il tempo ad Home Assistant di avviarsi
@@ -80,7 +90,7 @@ def fmt_float(num: float) -> float:
     return round(num, 6)
 
 
-class PriceSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
+class PrezzoSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensore relativo al prezzo per fasce."""
 
     def __init__(self, coordinator: PricesDataUpdateCoordinator, fascia: Fascia) -> None:
@@ -94,17 +104,15 @@ class PriceSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
         # ID univoco sensore basato su un nome fisso
         match self.fascia:
             case Fascia.MONO:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_mono_orario")
+                self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_mono_orario")
             case Fascia.F1:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_fascia_f1")
+                self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_fascia_f1")
             case Fascia.F2:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_fascia_f2")
+                self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_fascia_f2")
             case Fascia.F3:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_fascia_f3")
+                self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_fascia_f3")
             case Fascia.F23:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_fascia_f23")
-            case Fascia.ORARIA:
-                self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_orario")
+                self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_fascia_f23")
             case _:
                 self.entity_id = None
         self._attr_unique_id = self.entity_id
@@ -247,13 +255,16 @@ class FasciaSensorEntity(CoordinatorEntity, SensorEntity):
     @property
     def options(self) -> list[str] | None:
         """Possibili stati del sensore."""
-        return [Fascia.F1.value, Fascia.F2.value, Fascia.F3.value]
+        match self.coordinator.contract:
+            case 3: return [Fascia.F1.value, Fascia.F2.value, Fascia.F3.value]
+            case 2: return [Fascia.F1.value, Fascia.F23.value]
 
     @property
     def native_value(self) -> str | None:
         """Restituisce la fascia corrente come stato."""
         if not self.coordinator.fascia_corrente:
             return None
+
         return self.coordinator.fascia_corrente.value
 
     @property
@@ -289,7 +300,7 @@ class PrezzoFasciaSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
         self.coordinator = coordinator
 
         # ID univoco sensore basato su un nome fisso
-        self.entity_id = ENTITY_ID_FORMAT.format(f"prezzo_zonale_fascia_corrente")
+        self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_fascia_corrente")
         self._attr_unique_id = self.entity_id
         self._attr_has_entity_name = True
 
@@ -298,20 +309,121 @@ class PrezzoFasciaSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
         self._attr_suggested_display_precision = 6
         self._available = False
         self._native_value = 0
-        self._friendly_name = f"Prezzo zonale fascia corrente"
+        self._friendly_name = "Prezzo zonale fascia corrente"
 
     def _handle_coordinator_update(self) -> None:
         """Gestisce l'aggiornamento dei dati dal coordinator."""
 
         if self.coordinator.fascia_corrente is not None and self.coordinator.pz_values.value[self.coordinator.fascia_corrente] > 0:
 
-            self._available = len(self.coordinator.pz_data.data[self.coordinator.fascia_corrente]) > 0
+            self._available = self.coordinator.pz_values.value[self.coordinator.fascia_corrente] > 0
             self._native_value = self.coordinator.pz_values.value[self.coordinator.fascia_corrente]
             self._friendly_name = f"Prezzo zonale fascia corrente ({self.coordinator.fascia_corrente.value})"
+
         else:
             self._available = False
             self._native_value = 0
-            self._friendly_name = f"Prezzo zonale fascia corrente"
+            self._friendly_name = "Prezzo zonale fascia corrente"
+
+        self.async_write_ha_state()
+
+    @property
+    def extra_restore_state_data(self) -> ExtraStoredData:
+        """Determina i dati da salvare per il ripristino successivo."""
+        return RestoredExtraData(
+            {
+                "native_value": self._native_value if self._available else None,
+                "friendly_name": self._friendly_name if self._available else None,
+            }
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Entità aggiunta ad Home Assistant."""
+        await super().async_added_to_hass()
+
+        # Recupera lo stato precedente, se esiste
+        if (old_data := await self.async_get_last_extra_data()) is not None:
+            if (old_native_value := old_data.as_dict().get("native_value")) is not None:
+                self._available = True
+                self._native_value = old_native_value
+            if (
+                old_friendly_name := old_data.as_dict().get("friendly_name")
+            ) is not None:
+                self._friendly_name = old_friendly_name
+
+    @property
+    def should_poll(self) -> bool:
+        """Determina l'aggiornamento automatico."""
+        return False
+
+    @property
+    def available(self) -> bool:
+        """Determina se il valore è disponibile."""
+        return self._available
+
+    @property
+    def native_value(self) -> float:
+        """Restituisce il prezzo della fascia corrente."""
+        return fmt_float(self._native_value)
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Unita' di misura."""
+        return f"{CURRENCY_EURO}/{UnitOfEnergy.KILO_WATT_HOUR}"
+
+    @property
+    def icon(self) -> str:
+        """Icona da usare nel frontend."""
+        return "mdi:currency-eur"
+
+    @property
+    def name(self) -> str:
+        """Restituisce il nome del sensore."""
+        return self._friendly_name
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Restituisce gli attributi di stato."""
+        if CommonSettings.has_suggested_display_precision:
+            return {}
+
+        # Nelle versioni precedenti di Home Assistant
+        # restituisce un valore arrotondato come attributo
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 3), ".3f"))}
+
+class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
+    """Sensore che rappresenta il prezzo zonale della fascia corrente."""
+
+    def __init__(self, coordinator: PricesDataUpdateCoordinator) -> None:
+        """Inizializza il sensore."""
+        super().__init__(coordinator)
+
+        # Inizializza coordinator
+        self.coordinator = coordinator
+
+        # ID univoco sensore basato su un nome fisso
+        self.entity_id = ENTITY_ID_FORMAT.format("prezzo_zonale_orario")
+        self._attr_unique_id = self.entity_id
+        self._attr_has_entity_name = True
+
+        # Inizializza le proprietà comuni
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_suggested_display_precision = 6
+        self._available = False
+        self._native_value = 0
+        self._friendly_name = "Prezzo zonale orario"
+
+    def _handle_coordinator_update(self) -> None:
+        """Gestisce l'aggiornamento dei dati dal coordinator."""
+
+        if self.coordinator.pz_values.value[Fascia.ORARIA] > 0:
+            self._available = len(self.coordinator.pz_data.data[Fascia.ORARIA]) > 0
+            self._native_value = self.coordinator.pz_values.value[Fascia.ORARIA]
+            self._friendly_name = f"Prezzo zonale orario ({datetime.now().hour})"
+        else:
+            self._available = False
+            self._native_value = 0
+            self._friendly_name = "Prezzo zonale orario"
 
         self.async_write_ha_state()
 

@@ -21,6 +21,9 @@ from .const import (
     CONF_ZONE,
     ZONE_CODES,
     DEFAULT_ZONE,
+    CONTRACTS,
+    CONF_CONTRACT,
+    DEFAULT_CONTRACT,
     CONF_ACTUAL_DATA_ONLY,
     CONF_MONTH_AVG,
     CONF_SCAN_HOUR,
@@ -62,7 +65,10 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Inizializza i valori di configurazione (dalle opzioni o dalla configurazione iniziale)
         self.zone = ZONE_CODES[config.options.get(
-            CONF_ZONE, config.data.get(CONF_ZONE, DEFAULT_ZONE)
+            CONF_ZONE, config.data.get(CONF_ZONE, ZONE_CODES[DEFAULT_ZONE])
+        )]
+        self.contract = CONTRACTS[config.options.get(
+            CONF_CONTRACT, config.data.get(CONF_CONTRACT, CONTRACTS[DEFAULT_CONTRACT])
         )]
         self.actual_data_only = config.options.get(
             CONF_ACTUAL_DATA_ONLY, config.data.get(CONF_ACTUAL_DATA_ONLY, False)
@@ -205,13 +211,12 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
             # Calcola le fasce facendo la media dei prezzi orari che le compongono
             if fascia == Fascia.ORARIA:
                 self.pz_values.value[fascia] = pz_list[datetime.now().hour]
+                self.pz_values.value[Fascia.MONO] = mean(self.pz_data.data[fascia])
             else:
                 self.pz_values.value[fascia] = mean(self.pz_data.data[fascia])
 
-        # Calcola la fascia F23 e il mono-fascia facendo la media delle fasce che le compongono ponderata sul numero di ore che coprono
-        ore_fasce = {Fascia.F1: len(self.pz_data.data[Fascia.F1]), Fascia.F2: len(self.pz_data.data[Fascia.F2]), Fascia.F3: len(self.pz_data.data[Fascia.F3])}
-        self.pz_values.value[Fascia.MONO] = (self.pz_values.value[Fascia.F1] * ore_fasce[Fascia.F1] + self.pz_values.value[Fascia.F2] * ore_fasce[Fascia.F2] + self.pz_values.value[Fascia.F3] * ore_fasce[Fascia.F3]) / 24
-        self.pz_values.value[Fascia.F23] = (self.pz_values.value[Fascia.F2] * ore_fasce[Fascia.F2] + self.pz_values.value[Fascia.F3] * ore_fasce[Fascia.F3]) / (ore_fasce[Fascia.F2] + ore_fasce[Fascia.F3])
+        # Calcola la fascia F23
+        self.pz_values.value[Fascia.F23] = self.pz_values.value[Fascia.F2] * 0.46 + self.pz_values.value[Fascia.F3] * 0.54
 
         # Logga i dati
         _LOGGER.debug(
@@ -265,12 +270,12 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
 
         # Ottiene la fascia oraria corrente e il prossimo aggiornamento
         self.fascia_corrente, self.prossimo_cambio_fascia = get_fascia(
-            dt_util.now(time_zone=time_zone)
+            dt_util.now(time_zone=time_zone), self.contract
         )
 
         # Calcola la fascia futura ri-applicando lo stesso algoritmo
         self.fascia_successiva, self.termine_prossima_fascia = get_fascia(
-            self.prossimo_cambio_fascia
+            self.prossimo_cambio_fascia, self.contract
         )
         _LOGGER.info(
             "Nuova fascia corrente: %s (prossima: %s alle %s)",

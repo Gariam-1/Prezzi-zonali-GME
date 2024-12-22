@@ -7,8 +7,7 @@ from zipfile import ZipFile
 import defusedxml.ElementTree as et  # type: ignore[import-untyped]
 import holidays
 
-from .const import PHYSICAL_ZONES
-from .interfaces import Fascia, PricesData
+from .interfaces import Fascia
 
 # Ottiene il logger
 _LOGGER = logging.getLogger(__name__)
@@ -38,7 +37,7 @@ def get_fascia_for_xml(data: date, festivo: bool, ora: int) -> Fascia:
     return Fascia.F3
 
 
-def get_fascia(dataora: datetime) -> tuple[Fascia, datetime]:
+def get_fascia(dataora: datetime, contract: int) -> tuple[Fascia, datetime]:
     """Restituisce la fascia della data/ora indicata e la data del prossimo cambiamento."""
 
     # Verifica se la data corrente è un giorno con festività
@@ -49,41 +48,49 @@ def get_fascia(dataora: datetime) -> tuple[Fascia, datetime]:
     # F2 = lu-ve 7-8, lu-ve 19-23, sa 7-23
     # F3 = lu-sa 0-7, lu-sa 23-24, do, festivi
     # Festivi
-    if festivo:
-        fascia = Fascia.F3
-
-        # Prossima fascia: alle 7 di un giorno non domenica o festività
-        prossima = get_next_date(dataora, 7, 1, True)
-
-        return fascia, prossima
-    match dataora.weekday():
-        # Domenica
-        case 6:
+    if festivo or dataora.weekday() in [5, 6]:
+        if contract == 2:
+            fascia = Fascia.F23
+            # Prossima fascia: alle 8 di un giorno non domenica, sabato o festività
+            prossima = get_next_date(dataora, 8, 1, True, True)
+            
+        elif dataora.weekday() != 5:
             fascia = Fascia.F3
+            # Prossima fascia: alle 7 di un giorno non domenica o festività
             prossima = get_next_date(dataora, 7, 1, True)
 
+        return fascia, prossima
+    
+    match dataora.weekday():
         # Sabato
         case 5:
-            if 7 <= dataora.hour < 23:
-                # Sabato dalle 7 alle 23
-                fascia = Fascia.F2
-                # Prossima fascia: alle 23 dello stesso giorno
-                prossima = get_next_date(dataora, 23)
-            # abbiamo solo due fasce quindi facciamo solo il check per la prossima fascia
-            else:
-                # Sabato dopo le 23 e prima delle 7
-                fascia = Fascia.F3
-
-                if dataora.hour < 7:
-                    # Prossima fascia: alle 7 dello stesso giorno
-                    prossima = get_next_date(dataora, 7)
+            if contract != 2:
+                if 7 <= dataora.hour < 23:
+                    # Sabato dalle 7 alle 23
+                    fascia = Fascia.F2
+                    # Prossima fascia: alle 23 dello stesso giorno
+                    prossima = get_next_date(dataora, 23)
+                # abbiamo solo due fasce quindi facciamo solo il check per la prossima fascia
                 else:
-                    # Prossima fascia: alle 7 di un giorno non domenica o festività
-                    prossima = get_next_date(dataora, 7, 1, True)
+                    # Sabato dopo le 23 e prima delle 7
+                    fascia = Fascia.F3
+
+                    if dataora.hour < 7:
+                        # Prossima fascia: alle 7 dello stesso giorno
+                        prossima = get_next_date(dataora, 7)
+                    else:
+                        # Prossima fascia: alle 7 di un giorno non domenica o festività
+                        prossima = get_next_date(dataora, 7, 1, True)
 
         # Altri giorni della settimana
         case _:
-            if dataora.hour == 7 or 19 <= dataora.hour < 23:
+            if 8 <= dataora.hour < 19:
+                # Lunedì-venerdì dalle 8 alle 19
+                fascia = Fascia.F1
+                # Prossima fascia: alle 19 dello stesso giorno
+                prossima = get_next_date(dataora, 19)
+                
+            elif (dataora.hour == 7 or 19 <= dataora.hour < 23) and contract != 2:
                 # Lunedì-venerdì dalle 7 alle 8 e dalle 19 alle 23
                 fascia = Fascia.F2
 
@@ -94,13 +101,7 @@ def get_fascia(dataora: datetime) -> tuple[Fascia, datetime]:
                     # Prossima fascia: alle 23 dello stesso giorno
                     prossima = get_next_date(dataora, 23)
 
-            elif 8 <= dataora.hour < 19:
-                # Lunedì-venerdì dalle 8 alle 19
-                fascia = Fascia.F1
-                # Prossima fascia: alle 19 dello stesso giorno
-                prossima = get_next_date(dataora, 19)
-
-            else:
+            elif contract != 2:
                 # Lunedì-venerdì dalle 23 alle 7 del giorno dopo
                 fascia = Fascia.F3
 
@@ -112,12 +113,15 @@ def get_fascia(dataora: datetime) -> tuple[Fascia, datetime]:
                     # Prossima fascia: alle 7 di un giorno non domenica o festività
                     prossima = get_next_date(dataora, 7, 1, True)
 
+            else:
+                fascia = Fascia.F23
+                # Prossima fascia: alle 8 di un giorno non domenica, sabato o festività
+                prossima = get_next_date(dataora, 8, 1, True, True)
+
     return fascia, prossima
 
 
-def get_next_date(
-    dataora: datetime, ora: int, offset: int = 0, feriale: bool = False, minuto: int = 0
-) -> datetime:
+def get_next_date(dataora: datetime, ora: int, offset: int = 0, feriale: bool = False, sabato: bool = False, minuto: int = 0) -> datetime:
     """Ritorna una datetime in base ai parametri.
 
     Args:
@@ -125,6 +129,7 @@ def get_next_date(
     ora (int): l'ora a cui impostare la data.
     offset (int = 0): scostamento in giorni rispetto a dataora.
     feriale (bool = False): se True ritorna sempre una giornata lavorativa (no festivi, domeniche)
+    sabato (bool = False): se True non considera il sabato un giorno lavorativo
     minuto (int = 0): minuto a cui impostare la data.
 
     Returns:
@@ -137,7 +142,7 @@ def get_next_date(
     )
 
     if feriale:
-        while (prossima in holidays.IT()) or (prossima.weekday() == 6):  # type: ignore[attr-defined]
+        while prossima in holidays.IT() or prossima.weekday() == 6 or (sabato and prossima.weekday() == 5):  # type: ignore[attr-defined]
             prossima += timedelta(days=1)
 
     return prossima
@@ -154,8 +159,8 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fa
     it_holidays = holidays.IT()  # type: ignore[attr-defined]
 
     # Azzera i dati precedenti
-    for fascia in pz_data.keys():
-        pz_data[fascia].clear()
+    for f in pz_data.keys():
+        pz_data[f].clear()
 
     # Esamina ogni file XML negli ZIP (ordinandoli prima)
     priceFiles = priceArchive.namelist()
@@ -217,17 +222,15 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fa
             # Somma i valori dei diversi file per fascia per poter fare la media in seguito
             if file_index > 0:
                 pz_data[Fascia.ORARIA][ora] += prezzo_pz
-                pz_data[fascia][ora] += prezzo_pz
             else:
                 pz_data[Fascia.ORARIA].append(prezzo_pz)
-                pz_data[fascia].append(prezzo_pz)
+            pz_data[fascia].append(prezzo_pz)
     
     # Divide per il numero di file in cui erano presenti prezzi per completare la media
-    for fascia, dati in pz_data.items():
-        for ora in range(len(dati)):
-            dati[ora] /= fileNumber
+    for ora in range(len(pz_data[Fascia.ORARIA])):
+        pz_data[Fascia.ORARIA][ora] /= fileNumber
 
-            if fascia == Fascia.ORARIA:
-                _LOGGER.debug(f'Prezzo {zone} ora {ora}: {pz_data[Fascia.ORARIA][ora]}.')
+        if fascia == Fascia.ORARIA:
+            _LOGGER.debug(f'Prezzo {zone} ora {ora}: {pz_data[Fascia.ORARIA][ora]}.')
     
     return pz_data
