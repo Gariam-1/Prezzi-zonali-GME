@@ -7,7 +7,7 @@
 
 Integrazione per **Home Assistant** (derivata dall'integrazione [pun_sensor](https://github.com/virtualdj/pun_sensor) di virtualdj) che mostra i prezzi stimati del mese corrente per fasce orarie (F1, F2, F3, F23 e mono-orario) nonché la fascia oraria attuale e il prezzo dell'ora corrente.
 
-I valori vengono scaricati dal sito [MercatoElettrico.org](https://gme.mercatoelettrico.org/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN), i prezzi delle fasce vengono calcolati dai prezzi orari con una media ponderata sul numero di ore da cui le fasce sono composte.
+I valori vengono scaricati dal sito [MercatoElettrico.org](https://gme.mercatoelettrico.org/it-it/Home/Esiti/Elettricita/MGP/Esiti/PUN), i prezzi delle fasce vengono calcolati come media delle ore da cui sono composte.
 
 ## Installazione in Home Assistant
 
@@ -23,6 +23,10 @@ Dopo l'aggiunta dell'integrazione oppure cliccando il pulsante _Configurazione_ 
 
 Qui, per prima cosa, va selezionata la zona geografica per cui desideri avere i prezzi. Se non si è sicuri di quale zona scegliere si può chiedere al proprio fornitore o consulare il file pubbicato [QUI](https://www.terna.it/it/sistema-elettrico/pubblicazioni/news-operatori/dettaglio/Suddivisione-in-zone-di-mercato-della-Rete-di-Trasmissione-Nazionale-valida-a-partire-dal-1%C2%B0-gennaio-2021).
 
+Seleziona il tipo di contratto che avete con il vostro fornitore, tra: tri-orario (fasce F1, F2, F3), bi-orario (fasce F1, F23), mono-orario (fascia unica).
+Verranno creati solo i sensori relativi a tale contratto.
+Nel caso si andasse a modificare questa impostazione, sarà necessario ricaricare l'integrazione per applicare le modifiche.
+
 Successivamente è possibile selezionare un'ora del giorno in cui scaricare i prezzi aggiornati dell'energia (default: 1); il minuto di esecuzione, invece, è determinato automaticamente per evitare di gravare eccessivamente sulle API del sito (e mantenuto fisso, finché l'ora non viene modificata). Nel caso per qualche ragione il sito non fosse raggiungibile, verranno effettuati altri tentativi dopo 10, 30, 60, 120, 180 e 240 minuti.
 
 Se la casella di controllo _Usa solo dati reali ad inizio mese_ è **attivata**, all'inizio del mese quando non ci sono i prezzi per tutte le fasce orarie questi vengono disabilitati (non viene mostrato quindi un prezzo in €/kWh finché i dati non sono in numero sufficiente); nel caso invece la casella fosse **disattivata** (default) nel conteggio vengono inclusi gli ultimi giorni del mese precedente in modo da avere sempre un valore in €/kWh.
@@ -35,7 +39,8 @@ Se la casella di controllo _Usa solo dati reali ad inizio mese_ è **attivata**,
 
 ![Screenshot integrazione](screenshots_main.png "Dati visualizzati")
 
-L'integrazione fornisce il nome della fascia corrente relativa all'orario di Home Assistant (tra F1 / F2 / F3), i prezzi delle tre fasce F1 / F2 / F3 / F23, la fascia mono-oraria, il prezzo della fascia corrente e il prezzo dell'ora corrente.
+L'integrazione fornisce il nome della fascia corrente relativa all'orario di Home Assistant (tra F1 / F2 / F3), i prezzi delle tutte le fasce (F1 / F2 / F3 / F23 / Mono), il prezzo della fascia corrente e il prezzo dell'ora corrente.
+Non tutti questi sensori sono disponibili allo stesso momento, dipende da che tipo di contratto è stato selezionato nelle impostazioni.
 
 ### Prezzo al dettaglio
 
