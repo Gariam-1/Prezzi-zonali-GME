@@ -2,9 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Zonal prices scraping settings from GME",
+        "title": "GME zonal prices scraping settings",
         "data": {
           "zone": "Geographical zone",
+          "contract": "Type of contract",
           "scan_hour": "Web download start hour (0-23)",
           "month_average": "Calculate the average of the current month (otherwise provide only today's data)",
           "actual_data_only": "Use only real data at month start"
@@ -21,9 +22,10 @@
   "options": {
     "step": {
       "init": {
-        "title": "Edit zonal prices scraping settings from GME",
+        "title": "Edit GME zonal prices scraping settings",
         "data": {
           "zone": "Geographical zone",
+          "contract": "Type of contract",
           "scan_hour": "Web download start hour (0-23)",
           "month_average": "Calculate the average of the current month (otherwise provide only today's data)",
           "actual_data_only": "Use only real data at month start"
