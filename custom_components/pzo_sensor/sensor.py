@@ -215,7 +215,7 @@ class PrezzoSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))}
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g"))}
 
 
 class FasciaSensorEntity(CoordinatorEntity, SensorEntity):
@@ -384,7 +384,7 @@ class PrezzoFasciaSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
         """Restituisce gli attributi di stato."""
 
         attributi = {
-                "fascia_successiva":  str(format(self.coordinator.pz_values.value[self.coordinator.fascia_successiva], ".6g"))
+                "fascia_successiva":  str(format(round(self.coordinator.pz_values.value[self.coordinator.fascia_successiva], self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g"))
             }
         
         if CommonSettings.has_suggested_display_precision:
@@ -392,7 +392,7 @@ class PrezzoFasciaSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))} | attributi
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g"))} | attributi
 
 class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
     """Sensore che rappresenta il prezzo zonale orario."""
@@ -495,10 +495,10 @@ class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
         attributi = {
                 "ora_corrente": data_corrente.hour,
                 "ora_successiva": prossima_ora.hour,
-                "prezzo_successivo": str(format(self.coordinator.pz_data.data[Fascia.ORARIA][prossima_ora.hour]
+                "prezzo_successivo": str(format(round(self.coordinator.pz_data.data[Fascia.ORARIA][prossima_ora.hour]
                     if (self.coordinator.month_average and stesso_mese) or stesso_giorno
-                    else self.coordinator.pz_data.data[Fascia.ORARIA_NEXT][prossima_ora.hour], ".6g")),
-                "prezzo_medio": str(format(self.coordinator.pz_values.value[Fascia.MONO], ".6g"))
+                    else self.coordinator.pz_data.data[Fascia.ORARIA_NEXT][prossima_ora.hour], self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g")),
+                "prezzo_medio": str(format(round(self.coordinator.pz_values.value[Fascia.MONO], self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g"))
             }
         
         if CommonSettings.has_suggested_display_precision:
@@ -506,4 +506,4 @@ class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))} | attributi
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, self._attr_suggested_display_precision), f".{self._attr_suggested_display_precision}g"))} | attributi

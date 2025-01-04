@@ -169,7 +169,7 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str, mediaMese: True
     priceFiles = priceArchive.namelist()
     fileNumber = len(priceFiles)
 
-    for file_index, pf in enumerate(sorted(priceFiles)):
+    for pf in sorted(priceFiles):
         _LOGGER.debug(f'Lettura del file "{pf}".')
         # Scompatta il file XML in memoria
         try:
