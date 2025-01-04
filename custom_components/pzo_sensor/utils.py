@@ -53,13 +53,15 @@ def get_fascia(dataora: datetime, contract: int) -> tuple[Fascia, datetime]:
             fascia = Fascia.F23
             # Prossima fascia: alle 8 di un giorno non domenica, sabato o festività
             prossima = get_next_date(dataora, 8, 1, True, True)
+
+            return fascia, prossima
             
         elif dataora.weekday() != 5:
             fascia = Fascia.F3
             # Prossima fascia: alle 7 di un giorno non domenica o festività
             prossima = get_next_date(dataora, 7, 1, True)
 
-        return fascia, prossima
+            return fascia, prossima
     
     match dataora.weekday():
         # Sabato
@@ -148,7 +150,7 @@ def get_next_date(dataora: datetime, ora: int, offset: int = 0, feriale: bool = 
     return prossima
 
 
-def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fascia, list[float]]]:
+def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str, mediaMese: True) -> list[dict[Fascia, list[float]]]:
     """Estrae i valori dei prezzi per ogni fascia da un archivio zip contenente un XML per giorno del mese.
 
     Returns tuple(zonali, consumi zonali):
@@ -157,10 +159,11 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fa
     """
     # Carica le festività
     it_holidays = holidays.IT()  # type: ignore[attr-defined]
+    oggi = datetime.now().date()
 
     # Azzera i dati precedenti
     for f in pz_data.keys():
-        pz_data[f].clear()
+        if (f not in [Fascia.ORARIA, Fascia.ORARIA_NEXT]): pz_data[f].clear()
 
     # Esamina ogni file XML negli ZIP (ordinandoli prima)
     priceFiles = priceArchive.namelist()
@@ -202,6 +205,7 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fa
             int(dat_string.text[4:6]),
             int(dat_string.text[6:8]),
         )
+        domani = oggi < dat_date
 
         # Verifica la festività
         festivo = dat_date in it_holidays
@@ -219,12 +223,14 @@ def extract_xml(priceArchive: ZipFile, pz_data: dict, zone: str) -> list[dict[Fa
             prezzo_string = prezzo_string.replace(".", "").replace(",", ".")
             prezzo_pz = float(prezzo_string) / 1000
 
-            # Somma i valori dei diversi file per fascia per poter fare la media in seguito
-            if file_index > 0:
+            # Somma i prezzi orari dei diversi file per poter fare la media in seguito
+            if not domani or (mediaMese and oggi.month == dat_date.month):
                 pz_data[Fascia.ORARIA][ora] += prezzo_pz
             else:
-                pz_data[Fascia.ORARIA].append(prezzo_pz)
-            pz_data[fascia].append(prezzo_pz)
+                pz_data[Fascia.ORARIA_NEXT][ora] = prezzo_pz
+
+            # Aggiunge il prezzo al calcolo delle varie fasce, eccetto quando è il primo giorno del mese successivo al giorno corrente
+            if oggi.month == dat_date.month: pz_data[fascia].append(prezzo_pz)
     
     # Divide per il numero di file in cui erano presenti prezzi per completare la media
     for ora in range(len(pz_data[Fascia.ORARIA])):

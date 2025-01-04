@@ -2,7 +2,7 @@
 
 from typing import Any
 from zoneinfo import ZoneInfo
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from awesomeversion.awesomeversion import AwesomeVersion
 
@@ -215,7 +215,7 @@ class PrezzoSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 3), ".3f"))}
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))}
 
 
 class FasciaSensorEntity(CoordinatorEntity, SensorEntity):
@@ -271,9 +271,7 @@ class FasciaSensorEntity(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         """Attributi aggiuntivi del sensore."""
         return {
-            "fascia_successiva": self.coordinator.fascia_successiva.value
-            if self.coordinator.fascia_successiva
-            else None,
+            "fascia_successiva": self.coordinator.fascia_successiva.value if self.coordinator.fascia_successiva else None,
             "inizio_fascia_successiva": self.coordinator.prossimo_cambio_fascia,
             "termine_fascia_successiva": self.coordinator.termine_prossima_fascia,
         }
@@ -384,15 +382,20 @@ class PrezzoFasciaSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Restituisce gli attributi di stato."""
+
+        attributi = {
+                "fascia_successiva":  str(format(self.coordinator.pz_values.value[self.coordinator.fascia_successiva], ".6g"))
+            }
+        
         if CommonSettings.has_suggested_display_precision:
-            return {}
+            return attributi
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 3), ".3f"))}
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))} | attributi
 
 class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
-    """Sensore che rappresenta il prezzo zonale della fascia corrente."""
+    """Sensore che rappresenta il prezzo zonale orario."""
 
     def __init__(self, coordinator: PricesDataUpdateCoordinator) -> None:
         """Inizializza il sensore."""
@@ -484,9 +487,23 @@ class PrezzoOrarioSensorEntity(CoordinatorEntity, SensorEntity, RestoreEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Restituisce gli attributi di stato."""
+
+        data_corrente = datetime.now()
+        prossima_ora = data_corrente + timedelta(hours=1)
+        stesso_giorno = data_corrente.day == prossima_ora.day
+        stesso_mese = data_corrente.month == prossima_ora.month
+        attributi = {
+                "ora_corrente": data_corrente.hour,
+                "ora_successiva": prossima_ora.hour,
+                "prezzo_successivo": str(format(self.coordinator.pz_data.data[Fascia.ORARIA][prossima_ora.hour]
+                    if (self.coordinator.month_average and stesso_mese) or stesso_giorno
+                    else self.coordinator.pz_data.data[Fascia.ORARIA_NEXT][prossima_ora.hour], ".6g")),
+                "prezzo_medio": str(format(self.coordinator.pz_values.value[Fascia.MONO], ".6g"))
+            }
+        
         if CommonSettings.has_suggested_display_precision:
-            return {}
+            return attributi
 
         # Nelle versioni precedenti di Home Assistant
         # restituisce un valore arrotondato come attributo
-        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 3), ".3f"))}
+        return {ATTR_ROUNDED_DECIMALS: str(format(round(self.native_value, 6), ".6g"))} | attributi

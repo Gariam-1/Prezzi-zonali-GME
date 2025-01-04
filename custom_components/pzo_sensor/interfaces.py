@@ -11,6 +11,7 @@ class Fascia(Enum):
     F3 = "F3"
     F23 = "F23"
     ORARIA = "ORARIA"
+    ORARIA_NEXT = "ORARIA_NEXT"
 
 
 class PricesData:
@@ -18,10 +19,11 @@ class PricesData:
 
     def __init__(self):
         self.data: dict[Fascia, list[float]] = {
-            Fascia.ORARIA: [],
+            Fascia.ORARIA: [0] * 24,
             Fascia.F1: [],
             Fascia.F2: [],
             Fascia.F3: [],
+            Fascia.ORARIA_NEXT: [0] * 24
         }
 
 

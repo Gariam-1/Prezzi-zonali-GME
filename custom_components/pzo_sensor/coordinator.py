@@ -139,7 +139,7 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
         """Aggiornamento dati a intervalli prestabiliti."""
 
         # Calcola l'intervallo di date per il mese corrente
-        date_end = dt_util.now().date()
+        date_end = dt_util.now().date() + timedelta(days=1)
         date_start = date(date_end.year, date_end.month, 1) if self.month_average else date_end
 
         # All'inizio del mese, aggiunge i valori del mese precedente
@@ -203,7 +203,7 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
             )
 
         # Estrae i dati dall'archivio
-        self.pz_data.data = extract_xml(archive, self.pz_data.data, self.zone)
+        self.pz_data.data = extract_xml(archive, self.pz_data.data, self.zone, self.month_average)
         archive.close()
         
         # Per ogni fascia, calcola il valore dei prezzi zonali
@@ -213,7 +213,10 @@ class PricesDataUpdateCoordinator(DataUpdateCoordinator):
                 self.pz_values.value[fascia] = pz_list[datetime.now().hour]
                 self.pz_values.value[Fascia.MONO] = mean(self.pz_data.data[fascia])
             else:
-                self.pz_values.value[fascia] = mean(self.pz_data.data[fascia])
+                if len(self.pz_data.data[fascia]) > 0:
+                    self.pz_values.value[fascia] = mean(self.pz_data.data[fascia])
+                else:
+                    self.pz_values.value[fascia] = 0
 
         # Calcola la fascia F23
         self.pz_values.value[Fascia.F23] = self.pz_values.value[Fascia.F2] * 0.46 + self.pz_values.value[Fascia.F3] * 0.54
